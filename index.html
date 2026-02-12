@@ -14,37 +14,38 @@
         marquee { background: #000; color: #0f0; padding: 10px; display: block; font-family: monospace; border: 2px inset #808080; }
         .blink { animation: blinker 1s linear infinite; color: red; font-weight: bold; }
         @keyframes blinker { 50% { opacity: 0; } }
-        #savedList button { font-size: 12px; padding: 5px; background: #dcdcdc; }
+        #savedList, #favList { margin-top: 10px; font-size: 12px; text-align: left; background: #e0e0e0; padding: 5px; border: 1px inset #fff; }
     </style>
 </head>
 <body>
     <div class="window">
-        <div class="title-bar">WikiRadio_v1.1.exe</div>
+        <div class="title-bar">WikiRadio_v1.2.exe</div>
         <h1 style="margin:0;">📻 WIKI-RADIO</h1>
         <p id="liveStatus" class="blink">** STANDBY **</p>
         
         <div id="step1">
-            <input type="text" id="topicInput" placeholder="Topic (e.g. Punk rock)">
+            <input type="text" id="topicInput" placeholder="Topic (e.g. Space)">
             <button onclick="searchAndFindCategories()" style="width:100%">SCAN FREQUENCIES</button>
-            <div id="savedList" style="margin-top:15px; border-top: 1px solid #808080; padding-top: 10px;"></div>
+            <div id="savedList"></div>
+            <div id="favList"></div>
         </div>
 
         <div id="step2" class="hidden">
-            <p>Station Found! Pick a Band:</p>
+            <p>Station Found!</p>
             <select id="categorySelect"></select>
             <button onclick="startRadio()" style="background:#00ff00;">START RADIO</button>
-            <button onclick="saveCurrentStation()">SAVE PRESET</button>
+            <button onclick="saveCurrentStation()">SAVE STATION PRESET</button>
             <button onclick="resetApp()">BACK</button>
         </div>
 
         <div id="step3" class="hidden">
             <marquee id="nowPlaying">TUNING...</marquee>
-            <div id="statusText" style="font-size: 12px; margin: 10px 0;">RECEIVING SIGNAL...</div>
-            <button onclick="nextArticle()" style="width:100%; height:80px; font-size:24px;">SKIP >></button>
+            <button onclick="favoriteCurrentArticle()" style="background:#f1c40f; color: black; width:100%;">⭐ FAVORITE THIS ARTICLE</button>
+            <button onclick="nextArticle()" style="width:100%; height:80px; font-size:24px; margin-top:10px;">SKIP >></button>
             <button onclick="stopRadio()" style="margin-top:20px; width:100%">POWER OFF</button>
         </div>
 
-        <div style="margin-top:20px; font-size:12px; text-align:left; border-top: 1px solid #808080;">
+        <div style="margin-top:20px; font-size:12px; text-align:left;">
             <details>
                 <summary>Hardware Settings</summary>
                 Voice: <select id="voiceSelect" onchange="updateSettings()"></select><br>
@@ -52,19 +53,21 @@
             </details>
         </div>
     </div>
-    <audio id="silenceLoop" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA== " style="display:none;"></audio>
+    <audio id="silenceLoop" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display:none;"></audio>
 
     <script>
         let articleList = [];
+        let currentArticleTitle = "";
         const synth = window.speechSynthesis;
         let voices = [];
         let voiceSettings = { index: 0, rate: 1.1 };
 
         document.addEventListener('DOMContentLoaded', () => {
             updateSavedUI();
+            updateFavUI();
             loadVoices();
             if (speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = loadVoices; }
-            if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+            if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
         });
 
         function loadVoices() {
@@ -95,47 +98,26 @@
                 src.buffer = buf; gn.gain.value = 0.05;
                 src.connect(gn); gn.connect(ctx.destination);
                 src.start();
-            } catch(e) { console.log("Audio static blocked by browser"); }
+            } catch(e) {}
         }
 
         async function searchAndFindCategories() {
             const input = document.getElementById('topicInput').value;
             if (!input) return;
-            
-            document.getElementById('liveStatus').innerText = "** SCANNING **";
-
-            // First, find the correct page title
-            const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(input)}&limit=1&namespace=0&format=json&origin=*`;
-            const sRes = await fetch(searchUrl);
+            const sRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(input)}&limit=1&namespace=0&format=json&origin=*`);
             const sData = await sRes.json();
-            
-            if (!sData[1].length) {
-                alert("Could not find that topic. Try something simpler!");
-                document.getElementById('liveStatus').innerText = "** STANDBY **";
-                return;
-            }
-
+            if (!sData[1].length) return alert("No stations found!");
             const correctTitle = sData[1][0];
-
-            // Second, get categories for that correct title
-            const catUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=${encodeURIComponent(correctTitle)}&cllimit=20&format=json&origin=*`;
-            const cRes = await fetch(catUrl);
+            const cRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=${encodeURIComponent(correctTitle)}&cllimit=20&format=json&origin=*`);
             const cData = await cRes.json();
             const pId = Object.keys(cData.query.pages)[0];
             const cats = cData.query.pages[pId].categories || [];
-            
             const sel = document.getElementById('categorySelect');
             sel.innerHTML = '';
-            
-            if (cats.length === 0) {
-                alert("Found the topic, but it has no categories. Try 'Space' or 'The Beatles'.");
-                return;
-            }
-
+            if (!cats.length) return alert("No categories found.");
             cats.forEach(c => {
                 const o = document.createElement('option');
-                o.value = c.title;
-                o.innerText = c.title.replace('Category:', '');
+                o.value = c.title; o.innerText = c.title.replace('Category:', '');
                 sel.appendChild(o);
             });
             showStep(2);
@@ -146,13 +128,6 @@
             const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=${encodeURIComponent(c)}&cmlimit=50&format=json&origin=*`);
             const d = await res.json();
             articleList = d.query.categorymembers.filter(a => a.ns === 0);
-            
-            if (articleList.length === 0) {
-                alert("This category is empty. Try another one!");
-                return;
-            }
-
-            document.getElementById('liveStatus').innerText = "** ON AIR **";
             showStep(3);
             setupMedia();
             nextArticle();
@@ -162,23 +137,40 @@
             playStatic();
             synth.cancel();
             if (!articleList.length) return;
-            
             const art = articleList[Math.floor(Math.random() * articleList.length)];
+            currentArticleTitle = art.title;
             document.getElementById('nowPlaying').innerText = "NOW PLAYING: " + art.title;
-            
             const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(art.title)}&format=json&origin=*`);
             const d = await res.json();
             const txt = d.query.pages[Object.keys(d.query.pages)[0]].extract;
-            
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({ title: art.title, artist: "WikiRadio" });
-            }
-
-            const ut = new SpeechSynthesisUtterance(txt || "This article has no text.");
+            const ut = new SpeechSynthesisUtterance(txt || "Empty article.");
             ut.voice = voices[voiceSettings.index];
             ut.rate = voiceSettings.rate;
             ut.onend = nextArticle;
             synth.speak(ut);
+        }
+
+        function favoriteCurrentArticle() {
+            if (!currentArticleTitle) return;
+            let favs = JSON.parse(localStorage.getItem('wikiFavs') || "[]");
+            if (!favs.includes(currentArticleTitle)) {
+                favs.push(currentArticleTitle);
+                localStorage.setItem('wikiFavs', JSON.stringify(favs));
+                updateFavUI();
+                alert("Article Starred! ⭐");
+            }
+        }
+
+        function updateFavUI() {
+            const list = document.getElementById('favList');
+            const favs = JSON.parse(localStorage.getItem('wikiFavs') || "[]");
+            list.innerHTML = favs.length ? '<b>⭐ STARRED ARTICLES:</b><br>' : '';
+            favs.forEach(f => {
+                const link = document.createElement('div');
+                link.innerHTML = `• <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(f)}" target="_blank">${f}</a>`;
+                link.style.marginBottom = "5px";
+                list.appendChild(link);
+            });
         }
 
         function saveCurrentStation() {
@@ -190,14 +182,11 @@
         function updateSavedUI() {
             const list = document.getElementById('savedList');
             const favs = JSON.parse(localStorage.getItem('wikiStations') || "[]");
-            list.innerHTML = favs.length ? '<b>PRESETS:</b><br>' : '';
+            list.innerHTML = favs.length ? '<b>📻 PRESETS:</b><br>' : '';
             favs.forEach(f => {
                 const b = document.createElement('button');
                 b.innerText = f.replace('Category:', '');
-                b.onclick = () => { 
-                    document.getElementById('categorySelect').innerHTML = `<option value="${f}">${f}</option>`; 
-                    startRadio(); 
-                };
+                b.onclick = () => { document.getElementById('categorySelect').innerHTML = `<option value="${f}">${f}</option>`; startRadio(); };
                 list.appendChild(b);
             });
         }
@@ -213,12 +202,7 @@
             ['step1', 'step2', 'step3'].forEach((id, i) => document.getElementById(id).classList.toggle('hidden', i !== s-1));
         }
 
-        function stopRadio() { 
-            synth.cancel(); 
-            document.getElementById('liveStatus').innerText = "** STANDBY **";
-            showStep(1); 
-        }
-
+        function stopRadio() { synth.cancel(); showStep(1); }
         function resetApp() { showStep(1); }
     </script>
 </body>
