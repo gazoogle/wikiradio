@@ -1,18 +1,3 @@
-Gemini said
-That’s a great addition. A "Favorite Articles" list is perfect for when you hear something fascinating while driving and want to read the full details later when you're off the road.
-
-As for the "Add to Home Screen" issue, there are usually two reasons it fails:
-
-The Manifest Link: Sometimes the browser needs a very specific "path" to find the manifest.json.
-
-HTTPS: We fixed this by using GitHub, so that's good!
-
-Let's update the code to include the Star/Favorite button and fix the app installation.
-
-1. The Fixed manifest.json
-Update your manifest.json on GitHub to look like this. I added "scope" and "id", which help Chrome recognize it as an installable app.
-
-JSON
 {
   "name": "WikiRadio",
   "short_name": "WikiRadio",
