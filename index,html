@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WikiRadio Retro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { background-color: #008080; font-family: "Times New Roman"; padding: 20px; text-align: center; }
+        .window { background: #c0c0c0; border: 3px outset #fff; padding: 10px; box-shadow: 5px 5px 0px #000; max-width: 400px; margin: auto; }
+        .title-bar { background: #000080; color: white; padding: 5px; font-weight: bold; text-align: left; margin-bottom: 10px; }
+        button { background: #c0c0c0; border: 2px outset #fff; padding: 10px; margin: 5px; font-weight: bold; cursor: pointer; }
+        input, select { padding: 10px; width: 85%; border: 2px inset #fff; margin-bottom: 10px; font-size: 16px; }
+        .hidden { display: none; }
+        marquee { background: #000; color: #0f0; padding: 10px; display: block; font-family: monospace; border: 2px inset #808080; }
+        .blink { animation: blinker 1s linear infinite; color: red; font-weight: bold; }
+        @keyframes blinker { 50% { opacity: 0; } }
+        #savedList button { font-size: 12px; padding: 5px; background: #dcdcdc; }
+    </style>
+</head>
+<body>
+    <div class="window">
+        <div class="title-bar">WikiRadio_v1.1.exe</div>
+        <h1 style="margin:0;">📻 WIKI-RADIO</h1>
+        <p id="liveStatus" class="blink">** STANDBY **</p>
+        
+        <div id="step1">
+            <input type="text" id="topicInput" placeholder="Topic (e.g. Punk rock)">
+            <button onclick="searchAndFindCategories()" style="width:100%">SCAN FREQUENCIES</button>
+            <div id="savedList" style="margin-top:15px; border-top: 1px solid #808080; padding-top: 10px;"></div>
+        </div>
+
+        <div id="step2" class="hidden">
+            <p>Station Found! Pick a Band:</p>
+            <select id="categorySelect"></select>
+            <button onclick="startRadio()" style="background:#00ff00;">START RADIO</button>
+            <button onclick="saveCurrentStation()">SAVE PRESET</button>
+            <button onclick="resetApp()">BACK</button>
+        </div>
+
+        <div id="step3" class="hidden">
+            <marquee id="nowPlaying">TUNING...</marquee>
+            <div id="statusText" style="font-size: 12px; margin: 10px 0;">RECEIVING SIGNAL...</div>
+            <button onclick="nextArticle()" style="width:100%; height:80px; font-size:24px;">SKIP >></button>
+            <button onclick="stopRadio()" style="margin-top:20px; width:100%">POWER OFF</button>
+        </div>
+
+        <div style="margin-top:20px; font-size:12px; text-align:left; border-top: 1px solid #808080;">
+            <details>
+                <summary>Hardware Settings</summary>
+                Voice: <select id="voiceSelect" onchange="updateSettings()"></select><br>
+                Speed: <input type="range" id="rateRange" min="0.5" max="2" step="0.1" value="1.1" oninput="updateSettings()">
+            </details>
+        </div>
+    </div>
+    <audio id="silenceLoop" loop src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" style="display:none;"></audio>
+
+    <script>
+        let articleList = [];
+        const synth = window.speechSynthesis;
+        let voices = [];
+        let voiceSettings = { index: 0, rate: 1.1 };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSavedUI();
+            loadVoices();
+            if (speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = loadVoices; }
+            if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+        });
+
+        function loadVoices() {
+            voices = synth.getVoices();
+            const voiceSelect = document.getElementById('voiceSelect');
+            if (!voiceSelect) return;
+            voiceSelect.innerHTML = '';
+            voices.forEach((v, i) => {
+                const opt = document.createElement('option');
+                opt.value = i; opt.textContent = v.name;
+                voiceSelect.appendChild(opt);
+            });
+        }
+
+        function updateSettings() {
+            voiceSettings.index = document.getElementById('voiceSelect').value;
+            voiceSettings.rate = document.getElementById('rateRange').value;
+        }
+
+        function playStatic() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const buf = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < buf.length; i++) data[i] = Math.random() * 2 - 1;
+                const src = ctx.createBufferSource();
+                const gn = ctx.createGain();
+                src.buffer = buf; gn.gain.value = 0.05;
+                src.connect(gn); gn.connect(ctx.destination);
+                src.start();
+            } catch(e) { console.log("Audio static blocked by browser"); }
+        }
+
+        async function searchAndFindCategories() {
+            const input = document.getElementById('topicInput').value;
+            if (!input) return;
+            
+            document.getElementById('liveStatus').innerText = "** SCANNING **";
+
+            // First, find the correct page title
+            const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(input)}&limit=1&namespace=0&format=json&origin=*`;
+            const sRes = await fetch(searchUrl);
+            const sData = await sRes.json();
+            
+            if (!sData[1].length) {
+                alert("Could not find that topic. Try something simpler!");
+                document.getElementById('liveStatus').innerText = "** STANDBY **";
+                return;
+            }
+
+            const correctTitle = sData[1][0];
+
+            // Second, get categories for that correct title
+            const catUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=${encodeURIComponent(correctTitle)}&cllimit=20&format=json&origin=*`;
+            const cRes = await fetch(catUrl);
+            const cData = await cRes.json();
+            const pId = Object.keys(cData.query.pages)[0];
+            const cats = cData.query.pages[pId].categories || [];
+            
+            const sel = document.getElementById('categorySelect');
+            sel.innerHTML = '';
+            
+            if (cats.length === 0) {
+                alert("Found the topic, but it has no categories. Try 'Space' or 'The Beatles'.");
+                return;
+            }
+
+            cats.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.title;
+                o.innerText = c.title.replace('Category:', '');
+                sel.appendChild(o);
+            });
+            showStep(2);
+        }
+
+        async function startRadio() {
+            const c = document.getElementById('categorySelect').value;
+            const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=${encodeURIComponent(c)}&cmlimit=50&format=json&origin=*`);
+            const d = await res.json();
+            articleList = d.query.categorymembers.filter(a => a.ns === 0);
+            
+            if (articleList.length === 0) {
+                alert("This category is empty. Try another one!");
+                return;
+            }
+
+            document.getElementById('liveStatus').innerText = "** ON AIR **";
+            showStep(3);
+            setupMedia();
+            nextArticle();
+        }
+
+        async function nextArticle() {
+            playStatic();
+            synth.cancel();
+            if (!articleList.length) return;
+            
+            const art = articleList[Math.floor(Math.random() * articleList.length)];
+            document.getElementById('nowPlaying').innerText = "NOW PLAYING: " + art.title;
+            
+            const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(art.title)}&format=json&origin=*`);
+            const d = await res.json();
+            const txt = d.query.pages[Object.keys(d.query.pages)[0]].extract;
+            
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({ title: art.title, artist: "WikiRadio" });
+            }
+
+            const ut = new SpeechSynthesisUtterance(txt || "This article has no text.");
+            ut.voice = voices[voiceSettings.index];
+            ut.rate = voiceSettings.rate;
+            ut.onend = nextArticle;
+            synth.speak(ut);
+        }
+
+        function saveCurrentStation() {
+            const cat = document.getElementById('categorySelect').value;
+            let favs = JSON.parse(localStorage.getItem('wikiStations') || "[]");
+            if (!favs.includes(cat)) { favs.push(cat); localStorage.setItem('wikiStations', JSON.stringify(favs)); updateSavedUI(); }
+        }
+
+        function updateSavedUI() {
+            const list = document.getElementById('savedList');
+            const favs = JSON.parse(localStorage.getItem('wikiStations') || "[]");
+            list.innerHTML = favs.length ? '<b>PRESETS:</b><br>' : '';
+            favs.forEach(f => {
+                const b = document.createElement('button');
+                b.innerText = f.replace('Category:', '');
+                b.onclick = () => { 
+                    document.getElementById('categorySelect').innerHTML = `<option value="${f}">${f}</option>`; 
+                    startRadio(); 
+                };
+                list.appendChild(b);
+            });
+        }
+
+        function setupMedia() {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.setActionHandler('nexttrack', nextArticle);
+                document.getElementById('silenceLoop').play().catch(e => {});
+            }
+        }
+
+        function showStep(s) {
+            ['step1', 'step2', 'step3'].forEach((id, i) => document.getElementById(id).classList.toggle('hidden', i !== s-1));
+        }
+
+        function stopRadio() { 
+            synth.cancel(); 
+            document.getElementById('liveStatus').innerText = "** STANDBY **";
+            showStep(1); 
+        }
+
+        function resetApp() { showStep(1); }
+    </script>
+</body>
+</html>
