@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WikiRadio v1.2</title>
+    <title>WikiRadio Retro</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <style>
@@ -24,7 +24,7 @@
         <p id="liveStatus" class="blink">** STANDBY **</p>
         
         <div id="step1">
-            <input type="text" id="topicInput" placeholder="Topic (e.g. Punk rock)">
+            <input type="text" id="topicInput" placeholder="Topic (e.g. Space)">
             <button onclick="searchAndFindCategories()" style="width:100%">SCAN FREQUENCIES</button>
             <div id="savedList"></div>
             <div id="favList"></div>
@@ -53,7 +53,6 @@
             </details>
         </div>
     </div>
-
     <audio id="silenceLoop" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display:none;"></audio>
 
     <script>
@@ -62,7 +61,6 @@
         const synth = window.speechSynthesis;
         let voices = [];
         let voiceSettings = { index: 0, rate: 1.1 };
-        let wakeLock = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             updateSavedUI();
@@ -152,18 +150,6 @@
             synth.speak(ut);
         }
 
-        async function setupMedia() {
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.setActionHandler('nexttrack', nextArticle);
-                document.getElementById('silenceLoop').play().catch(e => {});
-            }
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch (err) {}
-        }
-
         function favoriteCurrentArticle() {
             if (!currentArticleTitle) return;
             let favs = JSON.parse(localStorage.getItem('wikiFavs') || "[]");
@@ -171,4 +157,53 @@
                 favs.push(currentArticleTitle);
                 localStorage.setItem('wikiFavs', JSON.stringify(favs));
                 updateFavUI();
-                alert("Article Star
+                alert("Article Starred! ⭐");
+            }
+        }
+
+        function updateFavUI() {
+            const list = document.getElementById('favList');
+            const favs = JSON.parse(localStorage.getItem('wikiFavs') || "[]");
+            list.innerHTML = favs.length ? '<b>⭐ STARRED ARTICLES:</b><br>' : '';
+            favs.forEach(f => {
+                const link = document.createElement('div');
+                link.innerHTML = `• <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(f)}" target="_blank">${f}</a>`;
+                link.style.marginBottom = "5px";
+                list.appendChild(link);
+            });
+        }
+
+        function saveCurrentStation() {
+            const cat = document.getElementById('categorySelect').value;
+            let favs = JSON.parse(localStorage.getItem('wikiStations') || "[]");
+            if (!favs.includes(cat)) { favs.push(cat); localStorage.setItem('wikiStations', JSON.stringify(favs)); updateSavedUI(); }
+        }
+
+        function updateSavedUI() {
+            const list = document.getElementById('savedList');
+            const favs = JSON.parse(localStorage.getItem('wikiStations') || "[]");
+            list.innerHTML = favs.length ? '<b>📻 PRESETS:</b><br>' : '';
+            favs.forEach(f => {
+                const b = document.createElement('button');
+                b.innerText = f.replace('Category:', '');
+                b.onclick = () => { document.getElementById('categorySelect').innerHTML = `<option value="${f}">${f}</option>`; startRadio(); };
+                list.appendChild(b);
+            });
+        }
+
+        function setupMedia() {
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.setActionHandler('nexttrack', nextArticle);
+                document.getElementById('silenceLoop').play().catch(e => {});
+            }
+        }
+
+        function showStep(s) {
+            ['step1', 'step2', 'step3'].forEach((id, i) => document.getElementById(id).classList.toggle('hidden', i !== s-1));
+        }
+
+        function stopRadio() { synth.cancel(); showStep(1); }
+        function resetApp() { showStep(1); }
+    </script>
+</body>
+</html>
