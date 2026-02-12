@@ -1,9 +1,7 @@
 {
   "name": "WikiRadio",
   "short_name": "WikiRadio",
-  "id": "/wikiradio/",
   "start_url": "./index.html",
-  "scope": "./",
   "display": "standalone",
   "background_color": "#008080",
   "theme_color": "#000080",
