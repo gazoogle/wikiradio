@@ -1,60 +1,111 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WikiRadio v1.2</title>
+    <title>WIKIRADIO - THE BEST PAGE ON THE WEB!</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <style>
-        body { background-color: #008080; font-family: "Times New Roman"; padding: 20px; text-align: center; }
-        .window { background: #c0c0c0; border: 3px outset #fff; padding: 10px; box-shadow: 5px 5px 0px #000; max-width: 400px; margin: auto; }
-        .title-bar { background: #000080; color: white; padding: 5px; font-weight: bold; text-align: left; margin-bottom: 10px; }
-        button { background: #c0c0c0; border: 2px outset #fff; padding: 10px; margin: 5px; font-weight: bold; cursor: pointer; }
-        input, select { padding: 10px; width: 85%; border: 2px inset #fff; margin-bottom: 10px; font-size: 16px; }
+        body { 
+            background: #000000 url('https://www.transparenttextures.com/patterns/stardust.png'); 
+            color: #00FF00; 
+            font-family: "Courier New", Courier, monospace; 
+            padding: 10px;
+        }
+        .main-container {
+            border: 4px ridge #ff00ff;
+            background: #000080;
+            padding: 15px;
+            max-width: 500px;
+            margin: auto;
+            box-shadow: 10px 10px 0px #ff0000;
+        }
+        h1 { 
+            color: #ffff00; 
+            text-shadow: 2px 2px #ff0000; 
+            font-style: italic;
+            text-decoration: underline;
+        }
+        button { 
+            background: #00ffff; 
+            color: #000; 
+            border: 3px outset #fff; 
+            font-weight: bold; 
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+        button:active { border: 3px inset #fff; }
+        input, select { 
+            background: #fff; 
+            color: #000; 
+            border: 3px inset #808080;
+            width: 90%;
+            font-weight: bold;
+        }
         .hidden { display: none; }
-        marquee { background: #000; color: #0f0; padding: 10px; display: block; font-family: monospace; border: 2px inset #808080; }
-        .blink { animation: blinker 1s linear infinite; color: red; font-weight: bold; }
+        marquee { 
+            border: 2px solid #fff; 
+            background: #000; 
+            padding: 5px; 
+            color: #00ffff;
+            font-weight: bold;
+        }
+        .blink { animation: blinker 0.8s linear infinite; }
         @keyframes blinker { 50% { opacity: 0; } }
-        #savedList, #favList { margin-top: 10px; font-size: 12px; text-align: left; background: #e0e0e0; padding: 5px; border: 1px inset #fff; }
+        
+        .nav-link { color: #ff00ff; font-size: 12px; }
+        #favList a { color: #ffff00; }
+        .guestbook { border-top: 2px dashed #00ff00; margin-top: 20px; padding-top: 10px; font-size: 10px; }
     </style>
 </head>
 <body>
-    <div class="window">
-        <div class="title-bar">WikiRadio_v1.2.exe</div>
-        <h1 style="margin:0;">📻 WIKI-RADIO</h1>
-        <p id="liveStatus" class="blink">** STANDBY **</p>
-        
-        <div id="step1">
-            <input type="text" id="topicInput" placeholder="Topic (e.g. Punk rock)">
-            <button onclick="searchAndFindCategories()" style="width:100%">SCAN FREQUENCIES</button>
-            <div id="savedList"></div>
-            <div id="favList"></div>
-        </div>
+    <center>
+        <img src="https://web.archive.org/web/20090830050117/http://geocities.com/Heartland/Acres/1314/anim_welcome.gif" width="200"><br>
+        <div class="main-container">
+            <h1>~* WikiRadio *~</h1>
+            <img src="https://web.archive.org/web/20091022131336/http://geocities.com/SoHo/6616/undercon.gif" width="50">
+            <p class="blink" style="color: #ff0000;">!! NEW ARTICLES EVERY MINUTE !!</p>
+            
+            <div id="step1">
+                <p>SEARCH FOR A TOPIC:</p>
+                <input type="text" id="topicInput" placeholder="ex: Heavy Metal">
+                <button onclick="searchAndFindCategories()">[ CLICK TO SCAN ]</button>
+                <div id="savedList"></div>
+                <div id="favList"></div>
+            </div>
 
-        <div id="step2" class="hidden">
-            <p>Station Found!</p>
-            <select id="categorySelect"></select>
-            <button onclick="startRadio()" style="background:#00ff00;">START RADIO</button>
-            <button onclick="saveCurrentStation()">SAVE STATION PRESET</button>
-            <button onclick="resetApp()">BACK</button>
-        </div>
+            <div id="step2" class="hidden">
+                <p style="color: #ffff00;">STATION FOUND! PICK A CHANNEL:</p>
+                <select id="categorySelect"></select>
+                <button onclick="startRadio()">== PLAY ==</button>
+                <button onclick="saveCurrentStation()">SAVE PRESET</button>
+                <button onclick="resetApp()">GO BACK</button>
+            </div>
 
-        <div id="step3" class="hidden">
-            <marquee id="nowPlaying">TUNING...</marquee>
-            <button onclick="favoriteCurrentArticle()" style="background:#f1c40f; color: black; width:100%;">⭐ FAVORITE THIS ARTICLE</button>
-            <button onclick="nextArticle()" style="width:100%; height:80px; font-size:24px; margin-top:10px;">SKIP >></button>
-            <button onclick="stopRadio()" style="margin-top:20px; width:100%">POWER OFF</button>
-        </div>
+            <div id="step3" class="hidden">
+                <marquee id="nowPlaying" scrollamount="10">LOADING DATA FROM THE CYBERSPACE...</marquee>
+                <div style="margin: 10px;">
+                    <button onclick="favoriteCurrentArticle()" style="background: yellow;">[ STAR THIS ]</button>
+                    <button onclick="nextArticle()" style="width:100%; height:80px; font-size:24px; background: #00ff00;">NEXT >>></button>
+                </div>
+                <button onclick="stopRadio()" style="background: red; color: white;">DISCONNECT</button>
+            </div>
 
-        <div style="margin-top:20px; font-size:12px; text-align:left;">
-            <details>
-                <summary>Hardware Settings</summary>
-                Voice: <select id="voiceSelect" onchange="updateSettings()"></select><br>
-                Speed: <input type="range" id="rateRange" min="0.5" max="2" step="0.1" value="1.1" oninput="updateSettings()">
-            </details>
+            <div class="guestbook">
+                <details>
+                    <summary>Voice Tuning [X]</summary>
+                    Voice: <select id="voiceSelect" onchange="updateSettings()"></select><br>
+                    Speed: <input type="range" id="rateRange" min="0.5" max="2" step="0.1" value="1.1" oninput="updateSettings()">
+                </details>
+                <br>
+                <img src="https://web.archive.org/web/20090804104432/http://geocities.com/Athens/Olympus/1131/netscape.gif">
+                <img src="https://web.archive.org/web/20091024032742/http://geocities.com/Hollywood/Hills/1410/ie_static.gif">
+            </div>
         </div>
-    </div>
-
-    <audio id="silenceLoop" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display:none;"></audio>
+        <p class="nav-link">BEST VIEWED IN 800x600 RESOLUTION</p>
+        <audio id="silenceLoop" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" style="display:none;"></audio>
+    </center>
 
     <script>
         let articleList = [];
@@ -65,9 +116,7 @@
         let wakeLock = null;
 
         document.addEventListener('DOMContentLoaded', () => {
-            updateSavedUI();
-            updateFavUI();
-            loadVoices();
+            updateSavedUI(); updateFavUI(); loadVoices();
             if (speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = loadVoices; }
             if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
         });
@@ -108,18 +157,31 @@
             if (!input) return;
             const sRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(input)}&limit=1&namespace=0&format=json&origin=*`);
             const sData = await sRes.json();
-            if (!sData[1].length) return alert("No stations found!");
+            if (!sData[1].length) return alert("NO DATA FOUND AT THIS ADDRESS");
+            
             const correctTitle = sData[1][0];
-            const cRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=${encodeURIComponent(correctTitle)}&cllimit=20&format=json&origin=*`);
+            const cRes = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=${encodeURIComponent(correctTitle)}&cllimit=40&format=json&origin=*`);
             const cData = await cRes.json();
             const pId = Object.keys(cData.query.pages)[0];
             const cats = cData.query.pages[pId].categories || [];
+            
             const sel = document.getElementById('categorySelect');
             sel.innerHTML = '';
-            if (!cats.length) return alert("No categories found.");
-            cats.forEach(c => {
+            
+            // --- THE NEW FILTER LOGIC ---
+            const bannedWords = ["All Wikipedia", "Articles containing", "All articles", "Articles with"];
+            
+            const filteredCats = cats.filter(c => {
+                const title = c.title.replace('Category:', '');
+                return !bannedWords.some(word => title.startsWith(word));
+            });
+
+            if (!filteredCats.length) return alert("THE MAINFRAME HAS NO VALID CATEGORIES.");
+
+            filteredCats.forEach(c => {
                 const o = document.createElement('option');
-                o.value = c.title; o.innerText = c.title.replace('Category:', '');
+                o.value = c.title; 
+                o.innerText = c.title.replace('Category:', '');
                 sel.appendChild(o);
             });
             showStep(2);
@@ -141,11 +203,11 @@
             if (!articleList.length) return;
             const art = articleList[Math.floor(Math.random() * articleList.length)];
             currentArticleTitle = art.title;
-            document.getElementById('nowPlaying').innerText = "NOW PLAYING: " + art.title;
+            document.getElementById('nowPlaying').innerText = ">>> NOW TRANSMITTING: " + art.title + " <<<";
             const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&titles=${encodeURIComponent(art.title)}&format=json&origin=*`);
             const d = await res.json();
             const txt = d.query.pages[Object.keys(d.query.pages)[0]].extract;
-            const ut = new SpeechSynthesisUtterance(txt || "Empty article.");
+            const ut = new SpeechSynthesisUtterance(txt || "DATA ERROR");
             ut.voice = voices[voiceSettings.index];
             ut.rate = voiceSettings.rate;
             ut.onend = nextArticle;
@@ -157,11 +219,7 @@
                 navigator.mediaSession.setActionHandler('nexttrack', nextArticle);
                 document.getElementById('silenceLoop').play().catch(e => {});
             }
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                }
-            } catch (err) {}
+            try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
         }
 
         function favoriteCurrentArticle() {
@@ -171,18 +229,16 @@
                 favs.push(currentArticleTitle);
                 localStorage.setItem('wikiFavs', JSON.stringify(favs));
                 updateFavUI();
-                alert("Article Starred! ⭐");
             }
         }
 
         function updateFavUI() {
             const list = document.getElementById('favList');
             const favs = JSON.parse(localStorage.getItem('wikiFavs') || "[]");
-            list.innerHTML = favs.length ? '<b>⭐ STARRED ARTICLES:</b><br>' : '';
+            list.innerHTML = favs.length ? '<b>* FAVORITE FILES *</b><br>' : '';
             favs.forEach(f => {
                 const link = document.createElement('div');
-                link.innerHTML = `• <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(f)}" target="_blank">${f}</a>`;
-                link.style.marginBottom = "5px";
+                link.innerHTML = `> <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(f)}" target="_blank">${f}</a>`;
                 list.appendChild(link);
             });
         }
@@ -196,7 +252,7 @@
         function updateSavedUI() {
             const list = document.getElementById('savedList');
             const favs = JSON.parse(localStorage.getItem('wikiStations') || "[]");
-            list.innerHTML = favs.length ? '<b>📻 PRESETS:</b><br>' : '';
+            list.innerHTML = favs.length ? '<b>* PRESET STATIONS *</b><br>' : '';
             favs.forEach(f => {
                 const b = document.createElement('button');
                 b.innerText = f.replace('Category:', '');
